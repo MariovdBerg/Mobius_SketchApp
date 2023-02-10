@@ -1,3 +1,7 @@
+//
+// Code downloaded from http://blog.mackerron.com/2011/01/01/javascript-cubic-splines/
+//
+
 var CubicSpline, MonotonicCubicSpline;
 MonotonicCubicSpline = function() {
   function MonotonicCubicSpline(x, y) {

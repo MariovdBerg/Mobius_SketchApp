@@ -1,4 +1,6 @@
 class MonotonicCubicSpline
+
+# by George MacKerron, mackerron.com
   
 # adapted from: 
 # http://sourceforge.net/mailarchive/forum.php?thread_name=EC90C5C6-C982-4F49-8D46-A64F270C5247%40gmail.com&forum_name=matplotlib-users
