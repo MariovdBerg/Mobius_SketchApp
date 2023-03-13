@@ -13,6 +13,7 @@ Change spline StrokeColor and StrokeWidth to variables from user input.
 -----ALERTS-----
 Switched x/y positions of min/max in Response array! Adjust in (old) grading code of question in Question Bank!
 In case a min/max outside domain of the spline is found, a simple solution is used by redefining the min/max to the edge of the domain.
+Browser detection method is unreliable due to use of navigator.userAgent
 */
 
 function runApp(array, type) {
@@ -21,15 +22,12 @@ function runApp(array, type) {
     console.log("Loading app dependencies...");
     /*jQuery.getScript('https://online-exams-mobius.tudelft.nl/web/Masterclass/Public_Html/cubic_spline.js', function() {*/
     jQuery.getScript('https://tudelft-exercise.mobius.cloud/web/Cie4305000/Public_Html/HTML_test/cubic_spline_original.js', function() {
-        console.log("Loaded 'cubic_spline.js'");
         jQuery.getScript('https://tudelft-exercise.mobius.cloud/web/Cie4305000/Public_Html/HTML_test/paper-full.js', function() {
         /*jQuery.getScript('https://online-exams-mobius.tudelft.nl/web/Masterclass/Public_Html/paper-full.min.js', function() {*/
-            console.log("Loaded 'paper-full_min.js'");
             console.log("...Loaded app dependencies");
-            /* Constructs PaperScope().
-                Constructs Tool() for interaction with mouse & keyboard.
-                Sets #myCanvas size.
-                Setup PaperScope with #myCanvas. */
+
+            /* Create a PaperScope and Tool object, give the canvas dimensions
+               and setup the scope with the canvas */
             var scope = new paper.PaperScope();
             var tool = new scope.Tool();
             $("#myCanvas").width( canvasDef.width );
@@ -46,17 +44,17 @@ function runApp(array, type) {
                 fill: false,
                 tolerance: 10
                 };
-            var mouseDraggedFrom;
-            var movedby;
+            var mouseStartLocation;
+            var mouseMovedDistance;
             var selected_x = null;
             var selected_y = null ;
             var y_axis_coordinate;
             var x_axis_coordinate;
-            var x_view_major_steps
-            var y_view_major_steps
+            var majorX_BrowserStep;
+            var majorY_BrowserStep;
             var PointsLocation = [];
-            var pathsPointsfitsX =[];
-            var pathsPointsfitsY =[];
+            var FittedSplineBrowserX = [];
+            var FittedSplineBrowserY = [];
             var drawnPoints = new scope.Group();
             var splinePoints = new scope.Group();
             var PermanentElements = new scope.Group();
@@ -66,38 +64,39 @@ function runApp(array, type) {
             console.log("Axes and grid are drawn");
             
             if (type==1) {
-                console.log("type = 1 : " + array);
+                console.log("type 1: No answer, not graded.");
                 buttons();
                 interact();
             }
             else if (type==2) {
                 /* array = "[[fitted spline] , [user browser coor] , [user axis coor] , [spline coor minimum] , [spline coor maximum]]" 
                     --spline coor miminum/maximum are only elements if getResponse got called (graded) */
-                console.log("type = 2 : " + array);
-                var res =  JSON.parse(array);
-                var fitted_spline = res[0];
-                var user_browser = res[1];
+                var Response =  JSON.parse(array);
+                var FittedSpline = Response[0];
+                var BrowserCoor = Response[1];
 
-                for (i = 0 ; i < user_browser.length ; i++) {
+                for (i = 0 ; i < BrowserCoor.length ; i++) {
                     /* Adds the drawn points regardless of interactive or gradebook mode,
                         otherwise no spline is drawn */
-                    PointsLocation.push(new scope.Point(user_browser[i][0], user_browser[i][1]));
+                    PointsLocation.push(new scope.Point(BrowserCoor[i][0], BrowserCoor[i][1]));
                 }
                 
                 if (gradebook) {
+                    console.log("type 2: Answered graded -> Gradebook mode.")
                     /* Adds the response (fitted spline) for the gradebook.
                        This requires the spline coordinates in axis format to be transformed to browser format */
-                    for (i = 0 ; i < fitted_spline.length ; i++) {
-                        pathsPointsfitsX.push(AxisXtoBrowserX(fitted_spline[i][0]));
-                        pathsPointsfitsY.push(AxisYtoBrowserY(fitted_spline[i][1]));
+                    for (i = 0 ; i < FittedSpline.length ; i++) {
+                        FittedSplineBrowserX.push(AxisXtoBrowserX(FittedSpline[i][0]));
+                        FittedSplineBrowserY.push(AxisYtoBrowserY(FittedSpline[i][1]));
                     }
                     draw_spline();
                 } 
                 else {
+                    console.log("type 2: Answered ungraded -> Interactive mode.")
                     /* Adds the response (fitted spline) when interactive mode is still true. */
-                    for (i = 0 ; i < user_browser.length ; i++) {
-                        pathsPointsfitsX.push(user_browser[i][0]);
-                        pathsPointsfitsY.push(user_browser[i][1]);
+                    for (i = 0 ; i < BrowserCoor.length ; i++) {
+                        FittedSplineBrowserX.push(BrowserCoor[i][0]);
+                        FittedSplineBrowserY.push(BrowserCoor[i][1]);
                     }
                     buttons();
                     interact();
@@ -105,15 +104,15 @@ function runApp(array, type) {
                 }
             } 
             else if (type==3) {
-                console.log("type = 3 : " + array);
+                console.log("type 3: Gradebook (correct) answer.");
                 /* array = $answer (i.e., "[[x1,y1],[...],[xn,yn]]") */
-                var res2 = JSON.parse(array); /* parses $answer string and returns same string without " ". */
-                var res =  JSON.parse(res2); /* parses again to get actual javascript array (i.e., [[x1,y1],[...],[xn,yn]]) */
-                for (i = 0 ; i < res.length ; i++) {
+                var Response2 = JSON.parse(array); /* parses $answer string and returns same string without " ". */
+                var Response =  JSON.parse(Response2); /* parses again to get actual javascript array (i.e., [[x1,y1],[...],[xn,yn]]) */
+                for (i = 0 ; i < Response.length ; i++) {
                     correctanswerGradebook = true;
-                    PointsLocation.push(new scope.Point(AxisXtoBrowserX(res[i][0]), AxisYtoBrowserY(res[i][1]) ) );
-                    pathsPointsfitsX.push(AxisXtoBrowserX(res[i][0]));
-                    pathsPointsfitsY.push(AxisYtoBrowserY(res[i][1]));
+                    PointsLocation.push(new scope.Point(AxisXtoBrowserX(Response[i][0]), AxisYtoBrowserY(Response[i][1]) ) );
+                    FittedSplineBrowserX.push(AxisXtoBrowserX(Response[i][0]));
+                    FittedSplineBrowserY.push(AxisYtoBrowserY(Response[i][1]));
                 }
                 draw_spline();
             }
@@ -133,30 +132,30 @@ function runApp(array, type) {
             };
 
             function draw_line(x1, y1, x2, y2, width, colour) {
-                var new_line = new scope.Path([new scope.Point(x1, y1), new scope.Point(x2, y2)]);
-                new_line.strokeWidth = width;
-                new_line.strokeColor = new scope.Color(colour) ;
-                return new_line;
+                var line = new scope.Path([new scope.Point(x1, y1), new scope.Point(x2, y2)]);
+                line.strokeWidth = width;
+                line.strokeColor = new scope.Color(colour) ;
+                return line;
             };
 
-            function draw_arrow(startP, endP) {
+            function draw_arrow(startPoint, endPoint) {
                 /* add axis line */
-                var axisline = new scope.Path();
-                axisline.strokeColor = axis_definition.AxisLineColor;
-                axisline.strokeWidth = axis_definition.AxisLineThickness ;
-                axisline.add(startP);
-                axisline.add(endP); 
-                PermanentElements.addChild(axisline);
+                var axisLine = new scope.Path();
+                axisLine.strokeColor = axis_definition.AxisLineColor;
+                axisLine.strokeWidth = axis_definition.AxisLineThickness ;
+                axisLine.add(startPoint);
+                axisLine.add(endPoint); 
+                PermanentElements.addChild(axisLine);
                 /* add arrow head
                     arrow head is constructed from a vector object
                     the vector consists of three points that create a '^','>','<','v' shape,
                     depending on function input. */
-                var vector = endP.subtract(startP);
+                var vector = endPoint.subtract(startPoint);
                 vector.length = axis_definition.AxisArrowSize;
                 var vectorItem = new scope.Path([
-                    endP.add(vector.rotate(axis_definition.AxisArrowAngle)),
-                    endP,
-                    endP.add(vector.rotate(-axis_definition.AxisArrowAngle))
+                    endPoint.add(vector.rotate(axis_definition.AxisArrowAngle)),
+                    endPoint,
+                    endPoint.add(vector.rotate(-axis_definition.AxisArrowAngle))
                 ]);
                 vectorItem.strokeWidth = axis_definition.AxisArrowLineThickness;
                 vectorItem.strokeColor = axis_definition.AxisArrowLineColor;
@@ -165,46 +164,52 @@ function runApp(array, type) {
 
             function BrowserXtoAxisX(x_loc){
                 if (!axis_definition.xAxisFlipped) {
-                    return (x_loc - (Math.abs(axes[0])/major_grid_lines.xStep * x_view_major_steps + canvasDef.hPad))/x_view_major_steps*major_grid_lines.xStep ;
+                    return (x_loc - (Math.abs(axes[0])/major_grid_lines.xStep * majorX_BrowserStep + canvasDef.hPad))/majorX_BrowserStep*major_grid_lines.xStep ;
                 } 
                 else {
-                    return -(x_loc - (Math.abs(axes[1])/major_grid_lines.xStep * x_view_major_steps + canvasDef.hPad))/x_view_major_steps*major_grid_lines.xStep ;
+                    return -(x_loc - (Math.abs(axes[1])/major_grid_lines.xStep * majorX_BrowserStep + canvasDef.hPad))/majorX_BrowserStep*major_grid_lines.xStep ;
                 }
             };
 
             function BrowserYtoAxisY(y_loc){
                 if (!axis_definition.yAxisFlipped) {
-                    return (-y_loc + (Math.abs(axes[3])/major_grid_lines.yStep * y_view_major_steps + canvasDef.vPad))/y_view_major_steps*major_grid_lines.yStep;
+                    return (-y_loc + (Math.abs(axes[3])/major_grid_lines.yStep * majorY_BrowserStep + canvasDef.vPad))/majorY_BrowserStep*major_grid_lines.yStep;
                 } 
                 else {
-                    return -(-y_loc - Math.abs(axes[3])/major_grid_lines.yStep * y_view_major_steps - canvasDef.vPad + canvasDef.height )/y_view_major_steps*major_grid_lines.yStep;
+                    return -(-y_loc - Math.abs(axes[3])/major_grid_lines.yStep * majorY_BrowserStep - canvasDef.vPad + canvasDef.height )/majorY_BrowserStep*major_grid_lines.yStep;
                 }
             };
 
             function AxisXtoBrowserX(x_loc){
                 if (!axis_definition.xAxisFlipped) {
-                    return x_loc*x_view_major_steps/major_grid_lines.xStep + (Math.abs(axes[0])/major_grid_lines.xStep * x_view_major_steps + canvasDef.hPad);
+                    return x_loc*majorX_BrowserStep/major_grid_lines.xStep + (Math.abs(axes[0])/major_grid_lines.xStep * majorX_BrowserStep + canvasDef.hPad);
                 } 
                 else {
-                    return -x_loc*x_view_major_steps/major_grid_lines.xStep + (Math.abs(axes[1])/major_grid_lines.xStep * x_view_major_steps + canvasDef.hPad);
+                    return -x_loc*majorX_BrowserStep/major_grid_lines.xStep + (Math.abs(axes[1])/major_grid_lines.xStep * majorX_BrowserStep + canvasDef.hPad);
                 }
             };
 
             function AxisYtoBrowserY(y_loc){
                 if (!axis_definition.yAxisFlipped) {
-                    return -y_loc*y_view_major_steps/major_grid_lines.yStep + (Math.abs(axes[3])/major_grid_lines.yStep * y_view_major_steps + canvasDef.vPad);
+                    return -y_loc*majorY_BrowserStep/major_grid_lines.yStep + (Math.abs(axes[3])/major_grid_lines.yStep * majorY_BrowserStep + canvasDef.vPad);
                 } 
                 else {
-                    return y_loc*y_view_major_steps/major_grid_lines.yStep - Math.abs(axes[3])/major_grid_lines.yStep * y_view_major_steps - canvasDef.vPad + canvasDef.height;
+                    return y_loc*majorY_BrowserStep/major_grid_lines.yStep - Math.abs(axes[3])/major_grid_lines.yStep * majorY_BrowserStep - canvasDef.vPad + canvasDef.height;
                 }
             };
 
-            function even_fix(getal, waarde){
-                if ((navigator.userAgent.indexOf("Chrome") !== -1)) {
-                    return getal + waarde;
-                } 
+            function even_fix(number, value){
+                var isChromeEdge = false;
+                var agent = navigator.userAgent;
+                if ((agent.indexOf("Chrome") !== -1) || (agent.indexOf("Edg") !== -1)) {
+                    console.log("Chrome/Edge browser identified to fix draw line pixel bug.")
+                    isChromeEdge = true;
+                }
+                if (isChromeEdge) {
+                    return number + value;
+                }
                 else {
-                    return getal;
+                    return number;
                 }
             };                
 
@@ -214,11 +219,11 @@ function runApp(array, type) {
                 PermanentElements.removeChildren();
                 /* Compute distance between minor check marks in browser coordinate system.
                     Round because browser coordinates are always integers. */
-                var x_view_minor_step = Math.round((canvasDef.width  - canvasDef.hPad*2) / ((Math.abs(axes[1] - axes[0]) / minor_grid_lines.xStep)));
-                var y_view_minor_step = Math.round((canvasDef.height - canvasDef.vPad*2) / ((Math.abs(axes[3] - axes[2]) / minor_grid_lines.yStep)));
+                var minorGrid_Xstep = Math.round((canvasDef.width  - canvasDef.hPad*2) / ((Math.abs(axes[1] - axes[0]) / minor_grid_lines.xStep)));
+                var minorGrid_Ystep = Math.round((canvasDef.height - canvasDef.vPad*2) / ((Math.abs(axes[3] - axes[2]) / minor_grid_lines.yStep)));
                 /* Recalculate canvas size. */
-                canvasDef.width  = x_view_minor_step * ((Math.abs(axes[1] - axes[0]) / minor_grid_lines.xStep)) + canvasDef.hPad*2;
-                canvasDef.height = y_view_minor_step * ((Math.abs(axes[3] - axes[2]) / minor_grid_lines.yStep)) + canvasDef.vPad*2;
+                canvasDef.width  = minorGrid_Xstep * ((Math.abs(axes[1] - axes[0]) / minor_grid_lines.xStep)) + canvasDef.hPad*2;
+                canvasDef.height = minorGrid_Ystep * ((Math.abs(axes[3] - axes[2]) / minor_grid_lines.yStep)) + canvasDef.vPad*2;
                 $("#myCanvas").width( canvasDef.width );
                 $("#myCanvas").height( canvasDef.height );
                 scope.viewSize = [canvasDef.width, canvasDef.height]; 
@@ -226,8 +231,8 @@ function runApp(array, type) {
 
                 /* Compute distance between major check marks in browser coordinate system.
                     Round because browser coordinates are always integers. */
-                x_view_major_steps = Math.round((canvasDef.width  - canvasDef.hPad*2) / ((Math.abs(axes[1] - axes[0]) / major_grid_lines.xStep)));
-                y_view_major_steps = Math.round((canvasDef.height - canvasDef.vPad*2) / ((Math.abs(axes[3] - axes[2]) / major_grid_lines.yStep)));
+                majorX_BrowserStep = Math.round((canvasDef.width  - canvasDef.hPad*2) / ((Math.abs(axes[1] - axes[0]) / major_grid_lines.xStep)));
+                majorY_BrowserStep = Math.round((canvasDef.height - canvasDef.vPad*2) / ((Math.abs(axes[3] - axes[2]) / major_grid_lines.yStep)));
                 
                 /* Set deltax for extra points when clicking min/max button */
                 try { 
@@ -235,11 +240,11 @@ function runApp(array, type) {
                         deltax = parseFloat(deltax);
                     } 
                     else {
-                        deltax = (minor_grid_lines.xStep * x_view_major_steps / 2.0) ;
+                        deltax = (minor_grid_lines.xStep * majorX_BrowserStep / 2.0) ;
                     }
                 } 
                 catch {
-                    deltax = (minor_grid_lines.xStep * x_view_major_steps / 2.0) ;
+                    deltax = (minor_grid_lines.xStep * majorX_BrowserStep / 2.0) ;
                 }
 
                 /* Set deltay for extra points when clicking min/max button */
@@ -248,11 +253,11 @@ function runApp(array, type) {
                         deltay = parseFloat(deltay);
                     } 
                     else {
-                        deltay = (minor_grid_lines.yStep * y_view_major_steps / 5.0);
+                        deltay = (minor_grid_lines.yStep * majorY_BrowserStep / 5.0);
                     }	 
                 } 
                 catch {
-                    deltay = (minor_grid_lines.yStep * y_view_major_steps / 5.0);
+                    deltay = (minor_grid_lines.yStep * majorY_BrowserStep / 5.0);
                 }
                 
                 /* y-axis position validation and set its x_coordinate */
@@ -283,11 +288,11 @@ function runApp(array, type) {
                     } 
                     else if (axis_definition.xAxisFlipped) {
                         /* x_axis is flipped, set to x = 0 coordinate */
-                        x_axis_coordinate = -Math.abs(axes[0]) / major_grid_lines.xStep * x_view_major_steps - canvasDef.hPad + canvasDef.width; 
+                        x_axis_coordinate = -Math.abs(axes[0]) / major_grid_lines.xStep * majorX_BrowserStep - canvasDef.hPad + canvasDef.width; 
                     } 
                     else {
                         /* Set to x = 0 coordinate */
-                        x_axis_coordinate = Math.abs(axes[0])/major_grid_lines.xStep * x_view_major_steps  + canvasDef.hPad;
+                        x_axis_coordinate = Math.abs(axes[0])/major_grid_lines.xStep * majorX_BrowserStep  + canvasDef.hPad;
                     }
                 }
 
@@ -319,11 +324,11 @@ function runApp(array, type) {
                     } 
                     else if (axis_definition.yAxisFlipped) {
                         /* y_axis is flipped, set to y = 0 coordinate */
-                        y_axis_coordinate = -Math.abs(axes[3])/major_grid_lines.yStep * y_view_major_steps  - canvasDef.vPad + canvasDef.height; 
+                        y_axis_coordinate = -Math.abs(axes[3])/major_grid_lines.yStep * majorY_BrowserStep  - canvasDef.vPad + canvasDef.height; 
                     } 
                     else {
                         /* Set to y = 0 coordinate */
-                        y_axis_coordinate = (Math.abs(axes[3])/major_grid_lines.yStep * y_view_major_steps  + canvasDef.vPad); 
+                        y_axis_coordinate = (Math.abs(axes[3])/major_grid_lines.yStep * majorY_BrowserStep  + canvasDef.vPad); 
                     }
                 }
 
@@ -343,7 +348,7 @@ function runApp(array, type) {
                         /* Draw x_axis major checkmark labels */
                         PermanentElements.addChild(draw_label_text(i, x_temp + axis_definition.xLabelPositionHorizontal, y_axis_coordinate + axis_definition.xLabelPositionVertical, 
                             axis_definition.xLabelJustification, axis_definition.xLabelColor, axis_definition.xLabelFontSize, axis_definition.xLabelShowZero ,axis_definition.xLabelNumberPrecision));
-                        x_temp = (x_temp + x_view_major_steps);
+                        x_temp = (x_temp + majorX_BrowserStep);
                     }
                 } 
                 else {
@@ -362,7 +367,7 @@ function runApp(array, type) {
                         /* Draw x_axis major checkmark labels */
                         PermanentElements.addChild(draw_label_text(i, x_temp + axis_definition.xLabelPositionHorizontal, y_axis_coordinate + axis_definition.xLabelPositionVertical, 
                             axis_definition.xLabelJustification, axis_definition.xLabelColor, axis_definition.xLabelFontSize , axis_definition.xLabelShowZero ,axis_definition.xLabelNumberPrecision));
-                        x_temp = (x_temp - x_view_major_steps);
+                        x_temp = (x_temp - majorX_BrowserStep);
                     }
                 }
 
@@ -382,7 +387,7 @@ function runApp(array, type) {
                         /* Draw y_axis major checkmark labels */
                         PermanentElements.addChild(draw_label_text(i, x_axis_coordinate + axis_definition.yLabelPositionHorizontal, y_temp + axis_definition.yLabelPositionVertical, 
                             axis_definition.yLabelJustification, axis_definition.yLabelColor, axis_definition.yLabelFontSize ,axis_definition.yLabelShowZero, axis_definition.yLabelNumberPrecision));
-                        y_temp = y_temp + y_view_major_steps;
+                        y_temp = y_temp + majorY_BrowserStep;
                     }
                 } else {
                     if (axis_definition.yAxisArrow){
@@ -400,7 +405,7 @@ function runApp(array, type) {
                         /* Draw y_axis major checkmark labels */
                         PermanentElements.addChild(draw_label_text(i, x_axis_coordinate + axis_definition.yLabelPositionHorizontal, y_temp + axis_definition.yLabelPositionVertical, 
                             axis_definition.yLabelJustification, axis_definition.yLabelColor, axis_definition.yLabelFontSize, axis_definition.yLabelShowZero, axis_definition.yLabelNumberPrecision));
-                        y_temp = y_temp + y_view_major_steps;
+                        y_temp = y_temp + majorY_BrowserStep;
                     }
                 }
 
@@ -412,7 +417,7 @@ function runApp(array, type) {
                     /* Draw minor vertical check mark */
                     PermanentElements.addChild(draw_line(x_temp, y_axis_coordinate + minor_grid_lines.checkmark_offset, x_temp, y_axis_coordinate - minor_grid_lines.checkmark_offset,
                         minor_grid_lines.checkmark_width, minor_grid_lines.checkmark_color));
-                    x_temp = (x_temp + x_view_minor_step);
+                    x_temp = (x_temp + minorGrid_Xstep);
                 }
 
                 /* FIX FOR CHROME 32 BIT +0,5 PIXEL */
@@ -423,7 +428,7 @@ function runApp(array, type) {
                     /* Draw minor vertical check mark */
                     PermanentElements.addChild(draw_line(x_axis_coordinate + minor_grid_lines.checkmark_offset, y_temp, x_axis_coordinate - minor_grid_lines.checkmark_offset, y_temp,
                         minor_grid_lines.checkmark_width, minor_grid_lines.checkmark_color));
-                    y_temp = y_temp + y_view_minor_step;
+                    y_temp = y_temp + minorGrid_Ystep;
                 }
 
                 /* x_axis name label */
@@ -529,13 +534,13 @@ function runApp(array, type) {
                     splinePoints.removeChildren();
                     
                     /******POINTS BY USER******/
-                    var pointsToStringBrowserCoor = ""; /* Create string for browser coordinates */
-                    var pointsToStringAxisCoor = ""; /* Create string for axis coordinates */
+                    var StringBrowserCoor = ""; /* Create string for browser coordinates */
+                    var StringAxisCoor = ""; /* Create string for axis coordinates */
                     /* Add points to be drawn if not displaying Gradebook */
                     if (!correctanswerGradebook) {
                         for (i = 0 ; i < PointsLocation.length ; i++ ) {
-                            pointsToStringBrowserCoor = pointsToStringBrowserCoor + "[" + PointsLocation[i].x + "," + PointsLocation[i].y + "],";   
-                            pointsToStringAxisCoor = pointsToStringAxisCoor + "[" + BrowserXtoAxisX(PointsLocation[i].x) + "," + BrowserYtoAxisY(PointsLocation[i].y) + "],";
+                            StringBrowserCoor = StringBrowserCoor + "[" + PointsLocation[i].x + "," + PointsLocation[i].y + "],";   
+                            StringAxisCoor = StringAxisCoor + "[" + BrowserXtoAxisX(PointsLocation[i].x) + "," + BrowserYtoAxisY(PointsLocation[i].y) + "],";
                             
                             var circle_radius = 5;
                             var circle = new scope.Shape.Circle(PointsLocation[i], circle_radius);
@@ -555,7 +560,7 @@ function runApp(array, type) {
                     
                     var pointsForMinMaxX = [];
                     var pointsForMinMaxY = [];
-                    var mySpline = new MonotonicCubicSpline(pathsPointsfitsX, pathsPointsfitsY);
+                    var mySpline = new MonotonicCubicSpline(FittedSplineBrowserX, FittedSplineBrowserY);
                     AnswerStr = "[[";
                     /* Add points to draw lines between to create fitted spline.
                         Also, add those points to AnswerStr */
@@ -571,8 +576,8 @@ function runApp(array, type) {
                     splinePoints.addChild(lineSpline);
 
                     /* Slice off last comma from "[x1,y1],[...],[xn,yn]," */
-                    pointsToStringBrowserCoor = pointsToStringBrowserCoor.slice(0, -1);
-                    pointsToStringAxisCoor = pointsToStringAxisCoor.slice(0, -1);
+                    StringBrowserCoor = StringBrowserCoor.slice(0, -1);
+                    StringAxisCoor = StringAxisCoor.slice(0, -1);
                     AnswerStr = AnswerStr.slice(0, -1);
 
                     /* finds fitted points that have maximum/minimum y-coordinate */
@@ -597,7 +602,7 @@ function runApp(array, type) {
                         max_y = mySpline.interpolate(max_x);
                     }
                     /* Append the three arrays and min/max to the empty AnswerStr array */
-                    AnswerStr = AnswerStr + "] , [" + pointsToStringBrowserCoor + "] , ["+ pointsToStringAxisCoor + "] , [[" + String(max_x) + "," + String(max_y) + " ]] , [[" + String(min_x) + "," + String(min_y) + "]]]";
+                    AnswerStr = AnswerStr + "] , [" + StringBrowserCoor + "] , ["+ StringAxisCoor + "] , [[" + String(max_x) + "," + String(max_y) + " ]] , [[" + String(min_x) + "," + String(min_y) + "]]]";
                 } 
                 /* Draw the points and lines of the spline */
                 scope.project.activeLayer.addChild(drawnPoints);
@@ -606,24 +611,24 @@ function runApp(array, type) {
 
             function interact() {
                 tool.onMouseDrag = function(click) {
-                    mouseDraggedFrom = click.point;
-                    movedby = click.delta;
+                    mouseStartLocation = click.point;
+                    mouseMovedDistance = click.delta;
                     var results =[];
                     for (var i = 0 ; i < PointsLocation.length ; i++) {
-                        if (mouseDraggedFrom.getDistance(PointsLocation[i], false) < hitOptions.tolerance){
-                            /* check if it's only one points, then move if more than 1 point, remove them */
+                        if (mouseStartLocation.getDistance(PointsLocation[i], false) < hitOptions.tolerance){
+                            /* check if it's only one point. If more than 1 point, remove them */
                             results.push(i);
                         }
                     }
                     for (i = (results.length-1) ; i >= 1 ; i--) {
                         PointsLocation.splice(results[i], 1);
-                        pathsPointsfitsX.splice(results[i], 1);
-                        pathsPointsfitsY.splice(results[i], 1);
+                        FittedSplineBrowserX.splice(results[i], 1);
+                        FittedSplineBrowserY.splice(results[i], 1);
                     }
 
-                    PointsLocation[results[0]] = new scope.Point(mouseDraggedFrom.x + movedby.x,mouseDraggedFrom.y + movedby.y);
-                    pathsPointsfitsY[results[0]] = mouseDraggedFrom.y + movedby.y;
-                    pathsPointsfitsX[results[0]] = mouseDraggedFrom.x + movedby.x;
+                    PointsLocation[results[0]] = new scope.Point(mouseStartLocation.x + mouseMovedDistance.x,mouseStartLocation.y + mouseMovedDistance.y);
+                    FittedSplineBrowserY[results[0]] = mouseStartLocation.y + mouseMovedDistance.y;
+                    FittedSplineBrowserX[results[0]] = mouseStartLocation.x + mouseMovedDistance.x;
                     draw_spline();
                 };
 
@@ -639,8 +644,8 @@ function runApp(array, type) {
                             /* First point */
                             if (PointsLocation.length == 0) {
                                 PointsLocation.push(hitPoint);
-                                pathsPointsfitsY.push(click.event.offsetY);
-                                pathsPointsfitsX.push(click.event.offsetX);
+                                FittedSplineBrowserY.push(click.event.offsetY);
+                                FittedSplineBrowserX.push(click.event.offsetX);
                             }
                             /* There are points */
                             else {
@@ -648,23 +653,22 @@ function runApp(array, type) {
                                     /* Insert point in array */
                                     if (click.event.offsetX < PointsLocation[i].x) {
                                         PointsLocation.splice(i, 0, hitPoint);
-                                        pathsPointsfitsX.splice(i, 0, click.event.offsetX);
-                                        pathsPointsfitsY.splice(i, 0, click.event.offsetY);
+                                        FittedSplineBrowserX.splice(i, 0, click.event.offsetX);
+                                        FittedSplineBrowserY.splice(i, 0, click.event.offsetY);
                                         break;
                                     }
                                     /* New point at the end, append point */
                                     else if (i == PointsLocation.length - 1) {
-                                            PointsLocation.splice(PointsLocation.length, 0, hitPoint);
-                                            pathsPointsfitsX.splice(PointsLocation.length, 0, click.event.offsetX);
-                                            pathsPointsfitsY.splice(PointsLocation.length, 0, click.event.offsetY);
-                                            break;
+                                        PointsLocation.splice(PointsLocation.length, 0, hitPoint);
+                                        FittedSplineBrowserX.splice(PointsLocation.length, 0, click.event.offsetX);
+                                        FittedSplineBrowserY.splice(PointsLocation.length, 0, click.event.offsetY);
+                                        break;
                                     }
                                 }
                             }
                         }
                     } 
                     else {
-                        /* No point is selected. Draw spline */
                         selected_x = click.event.offsetX;  
                         selected_y = click.event.offsetY ;
                     }
@@ -678,18 +682,18 @@ function runApp(array, type) {
                 /* delete point */
                 delPoint.click(function() { 
                     /* loops through all the drawn points */
-                    for (points = 0 ; points < PointsLocation.length ; points++) {
+                    for (i = 0 ; i < PointsLocation.length ; i++) {
                         /* if difference between (x,y) coordinate of point and (x,y) coordinate of selected (clicked on screen)
                             is less than 10, point is found and remove that point from array */
-                        if ((Math.abs(PointsLocation[points].x - selected_x) < 10) && (Math.abs(PointsLocation[points].y - selected_y) < 10)) {
-                            PointsLocation.splice(points, 1);
-                            pathsPointsfitsX.splice(points, 1);
-                            pathsPointsfitsY.splice(points, 1);
+                        if ((Math.abs(PointsLocation[i].x - selected_x) < 10) && (Math.abs(PointsLocation[i].y - selected_y) < 10)) {
+                            PointsLocation.splice(i, 1);
+                            FittedSplineBrowserX.splice(i, 1);
+                            FittedSplineBrowserY.splice(i, 1);
                         }
                     }
                     /* deselect point and draw new spline */
                     selected_x = null;
-                    selected_y = null ;
+                    selected_y = null;
                     draw_spline();
                 });
 
@@ -698,8 +702,8 @@ function runApp(array, type) {
                 delAll.click(function() { 
                     /* splice(0, .length) removes all items from array */
                     PointsLocation.splice(0, PointsLocation.length);
-                    pathsPointsfitsX.splice(0, pathsPointsfitsX.length);
-                    pathsPointsfitsY.splice(0, pathsPointsfitsY.length);
+                    FittedSplineBrowserX.splice(0, FittedSplineBrowserX.length);
+                    FittedSplineBrowserY.splice(0, FittedSplineBrowserY.length);
                     drawnPoints.removeChildren();
                     splinePoints.removeChildren();
                     /* draw spline */
@@ -710,20 +714,20 @@ function runApp(array, type) {
                 /* min function */
                 buttonMin.click(function() {
                     /* loops through all the drawn points */
-                    for (points = 0 ; points < PointsLocation.length ; points++ ){
+                    for (i = 0 ; i < PointsLocation.length ; i++ ){
                         /* if difference between (x,y) coordinate of point and (x,y) coordinate where clicked on screen
                             is less than 10, point is found and remove that point from array */
-                        if ((Math.abs(PointsLocation[points].x - selected_x) < 10) && (Math.abs(PointsLocation[points].y - selected_y) < 10)) {
+                        if ((Math.abs(PointsLocation[i].x - selected_x) < 10) && (Math.abs(PointsLocation[i].y - selected_y) < 10)) {
                             /* 'temporarily' save y-coordinate of selected point */
-                            var tempy = PointsLocation[points].y;
+                            var tempy = PointsLocation[i].y;
                             /* insert point before selected point, move point w.r.t. selected point by deltax and deltay */
-                            PointsLocation.splice(points,0, new scope.Point(selected_x - deltax, tempy - deltay ));          
-                            pathsPointsfitsX.splice(points, 0, selected_x - deltax );
-                            pathsPointsfitsY.splice(points, 0, tempy - deltay);
+                            PointsLocation.splice(i,0, new scope.Point(selected_x - deltax, tempy - deltay ));          
+                            FittedSplineBrowserX.splice(i, 0, selected_x - deltax );
+                            FittedSplineBrowserY.splice(i, 0, tempy - deltay);
                             /* insert point after selected point, move point w.r.t. selected point by deltax and deltay */
-                            PointsLocation.splice(points+2, 0, new scope.Point(selected_x + deltax, tempy - deltay ) );
-                            pathsPointsfitsX.splice(points+2, 0, selected_x + deltax);
-                            pathsPointsfitsY.splice(points+2, 0, tempy - deltay);
+                            PointsLocation.splice(i+2, 0, new scope.Point(selected_x + deltax, tempy - deltay ) );
+                            FittedSplineBrowserX.splice(i+2, 0, selected_x + deltax);
+                            FittedSplineBrowserY.splice(i+2, 0, tempy - deltay);
                             break;
                         }
                     }
@@ -737,20 +741,20 @@ function runApp(array, type) {
                 /* max function */
                 buttonMax.click(function() { 
                     /* loops through all the drawn points */
-                    for (points = 0 ; points < PointsLocation.length ; points++ ){
+                    for (i = 0 ; i < PointsLocation.length ; i++ ){
                         /* if difference between (x,y) coordinate of point and (x,y) coordinate where clicked on screen
                             is less than 10, point is found and remove that point from array */
-                        if ((Math.abs(PointsLocation[points].x - selected_x) < 10) && (Math.abs(PointsLocation[points].y - selected_y) < 10)) {
+                        if ((Math.abs(PointsLocation[i].x - selected_x) < 10) && (Math.abs(PointsLocation[i].y - selected_y) < 10)) {
                             /* 'temporarily' save y-coordinate of selected point */
-                            var tempy = PointsLocation[points].y;
+                            var tempy = PointsLocation[i].y;
                             /* insert point before selected point, move point w.r.t. selected point by deltax and deltay */
-                            PointsLocation.splice(points,0, new scope.Point(selected_x - deltax, tempy + deltay ) );               
-                            pathsPointsfitsX.splice(points, 0, selected_x - deltax);
-                            pathsPointsfitsY.splice(points, 0, tempy + deltay);
+                            PointsLocation.splice(i,0, new scope.Point(selected_x - deltax, tempy + deltay ));               
+                            FittedSplineBrowserX.splice(i, 0, selected_x - deltax);
+                            FittedSplineBrowserY.splice(i, 0, tempy + deltay);
                             /* insert point after selected point, move point w.r.t. selected point by deltax and deltay */
-                            PointsLocation.splice(points+2, 0, new scope.Point(selected_x + deltax, tempy + deltay ) );
-                            pathsPointsfitsX.splice(points+2, 0, selected_x + deltax);
-                            pathsPointsfitsY.splice(points+2, 0, tempy + deltay);
+                            PointsLocation.splice(i+2, 0, new scope.Point(selected_x + deltax, tempy + deltay ));
+                            FittedSplineBrowserX.splice(i+2, 0, selected_x + deltax);
+                            FittedSplineBrowserY.splice(i+2, 0, tempy + deltay);
                             break;
                         }
                     }
