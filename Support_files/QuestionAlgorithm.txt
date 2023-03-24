@@ -1,0 +1,85 @@
+$teachermode = "true";
+$answer = "[[-10, 0],[-6,1],[2, 0],[6,-2],[10, 0]]";
+$axes = "[-10,10,-3,2]";
+$answerplot = plotmaple("p1 := plot(CurveFitting[Spline]($answer,x), x = $axes[1]..$axes[2], thickness=2, color=blue): p2 := plot($answer, style = point, symbol = solidcircle, symbolsize = 20, color=brown): plots[display]({p1,p2}, view=[$axes[1]..$axes[2],$axes[3]..$axes[4]], labels=[``,``])");
+$canvasDef = "{
+    width: 800,
+    height: 600,
+    vPad: 30,
+    hPad: 30
+}";
+$backgroundlines = "{  
+    lijn1: { 
+        x: [-10, -6, 2, 6, 10],
+        y: [  0, -1, 0, 2,  0],
+        lineColor: 'grey',
+        lineColorGreyShade: -1,
+        lineThickness: 1
+    }
+}";
+$axis_definition = "{
+    AxisArrowAngle: 135,
+    AxisArrowLineColor: 'black',
+    AxisArrowLineThickness: 1,  
+    AxisArrowSize: 10,
+    AxisLineColor: 'black',
+    AxisLineThickness: 1,
+    x_axis_position: 'auto',
+    xAxisArrow: true,
+    xAxisFlipped: false,
+    xAxisName: 'km',
+    xAxisNameFontColor: 'black',
+    xAxisNameFontSize: 15,
+    xAxisNameHorizontal: 270,
+    xAxisNameJustification: 'center',
+    xAxisNameVertical: 30,
+    xLabelColor: 'black',
+    xLabelFontSize: 12,
+    xLabelJustification: 'center',
+    xLabelNumberPrecision: 0,
+    xLabelPositionHorizontal: 0,
+    xLabelPositionVertical: 15,
+    xLabelShowZero: false,
+    y_axis_position: 'auto',
+    yAxisArrow: true,
+    yAxisFlipped: false,
+    yAxisName: 'S/Smax',
+    yAxisNameFontColor: 'black',
+    yAxisNameFontSize: 15,
+    yAxisNameHorizontal: -30,
+    yAxisNameJustification: 'center',
+    yAxisNameOrientation: 0,
+    yAxisNameVertical: -160,
+    yLabelColor: 'black',
+    yLabelFontSize: 12,
+    yLabelJustification: 'center',
+    yLabelNumberPrecision: 1,
+    yLabelPositionHorizontal:  15,
+    yLabelPositionVertical: +5,
+    yLabelShowZero: false
+}";
+$major_grid_lines = "{
+    xStep: 1,
+    yStep: 0.5,
+    lineWidth: 0.5,
+    lineColor: 0.5,
+    checkmark_offset: 5,
+    checkmark_color: 'black',
+    checkmark_width: 0.8
+}";
+$minor_grid_lines = "{
+    xStep: 0.5,
+    yStep: 0.1,
+    lineWidth: 0.2,
+    lineColor: 0.5,
+    checkmark_offset: 3,
+    checkmark_color: 'grey',
+    checkmark_width: 0.5
+}";
+$interaction_settings = "{
+    deltax: 10,
+    deltay: 1,
+    draw_step: 10,
+    spline_color: 'red',
+    spline_width: 1.7
+}";

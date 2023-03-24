@@ -1,35 +1,26 @@
 var teachermode = $teachermode;
-var type = 0;
-var gradebook = false;
 var axes = $axes;
 var canvasDef = $canvasDef;
 var axis_definition = $axis_definition;
 var major_grid_lines = $major_grid_lines;
 var minor_grid_lines = $minor_grid_lines;
 var backgroundlines = $backgroundlines;
-var deltax = "10"; /* pixels */
-var deltay = "1"; /* pixels */
-var precision = 0.05;
-var draw_step = 10; /* pixels */
+var interaction_settings = $interaction_settings;
+var type = 0;
 var AnswerStr = "";
 var errormessages ="";
+var gradebook = false;
 
-jQuery.getScript('/web/Cie4305000/Public_Html/HTML_test/run_app_new.js', function(){});
+jQuery.getScript('/web/Cie4305000/Public_Html/HTML_test/run_app.js', function(){});
 /* jQuery.getScript('/web/Masterclass/Public_Html/run_app.js', function(){}); */
 
 function initialize(interactiveMode) {
     console.log("initialize(" + interactiveMode + ") is called");
     gradebook = !interactiveMode;
     if (gradebook){
-        /* Remove HTML buttons from page */
-        jQuery( "#delPoint" ).remove();
-        jQuery( "#delAll" ).remove();
-        jQuery( "#buttonMin" ).remove();
-        jQuery( "#buttonMax" ).remove();
-        jQuery( "#toggleContrast" ).remove();
-        jQuery( "#gridMinor" ).remove();
-        jQuery( "#gridMajor" ).remove();
-        jQuery( "#contrast" ).remove();
+        /* We are in gradebook mode, thus */
+        /* we remove HTML buttons from page */
+        jQuery( "#buttons" ).remove();
     }
 };
 
