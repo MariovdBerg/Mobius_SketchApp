@@ -7,6 +7,7 @@ text
 
 -----TO DO/CHANGE-----
 Split axis_definition into X-axis (line, labels), Y-axis (line, labels) and axis-arrow (for adjustability).
+Keep circle fill color red when dragging point.
 
 -----ALERTS-----
 Switched x/y positions of min/max in Response array! Adjust in (old) grading code of question in Question Bank!
@@ -57,14 +58,14 @@ function runApp(array, type) {
 
             /* Used to by draw_axis(), BrowserXtoAxisX(), BrowserYtoAxisY, AxisXtoBrowserX() and AxisYtoBrowserY()
                Need to be defined globally. */
-            var x_axis_coordinate;  /* Location of horizontal axis (x-axis). Value is in pixel coordinates. */
-            var y_axis_coordinate;  /* Location of vertical axis (y-axis). Value is in pixel coordinates. */
+            var y_axis_x_coordinate;  /* Location of horizontal axis (x-axis). Value is in pixel coordinates. */
+            var x_axis_y_coordinate;  /* Location of vertical axis (y-axis). Value is in pixel coordinates. */
             var majorX_BrowserStep; /* Pixel distance between major vertical gridlines */
             var majorY_BrowserStep; /* Pixel distance between major horiztonal gridlines */
             var minorX_BrowserStep; /* Pixel distance between minor vertical gridlines */
             var minorY_BrowserStep; /* Pixel distance between minor horizontal gridlines */
 
-            var mouseStartLocation; /* Pixel coordinates of the mouse when clicked */
+            var hitPoint; /* Point object of where is clicked */
 
             /* Initialize a bunch of variables */
             var hitOptions = 
@@ -183,51 +184,6 @@ function runApp(array, type) {
              */
             function draw_axis() {
                 /**
-                 * In Chrome and Edge gridlines are blurred as they are drawn over 2 pixels.
-                 * Fix by shifting gridlines 0.5 pixel.
-                 * !CAUTION! Fix is unsafe because it checks userAgent string, which is not "unique".
-                 * @param {Number} number - current pixels
-                 * @param {Number} value - pixel shift
-                 * @returns 
-                 */
-                function even_fix(number, value){
-                    var isChromeEdge = false;
-                    var agent = navigator.userAgent;
-                    if ((agent.indexOf("Chrome") !== -1) || (agent.indexOf("Edg") !== -1)) {
-                        console.log("Chrome/Edge browser identified to fix draw line pixel bug.")
-                        isChromeEdge = true;
-                    }
-                    if (isChromeEdge) {
-                        return number + value;
-                    }
-                    else {
-                        return number;
-                    }
-                };
-
-                /**
-                 * Draw the text for the axis labels (not axis name).
-                 * @param {Integer} digit - integer from the iteration
-                 * @param {Integer} x1 - X-coordinate to draw
-                 * @param {Integer} y1 - Y-coordinate to draw
-                 * @param {String} LabelJustification - Text justification (left, right, center)
-                 * @param {String} LabelColor - Text color
-                 * @param {Integer} LabelFontSize - Text font size
-                 * @param {Boolean} LabelShowZero - Show zero value at origin
-                 * @param {Number} LabelNumberPrecision - Decimal precision (0 for integers)
-                 */
-                function draw_label_text(digit, x1, y1, LabelJustification, LabelColor, LabelFontSize, LabelShowZero, LabelNumberPrecision) {
-                    var text = new scope.PointText(new scope.Point(x1, y1));
-                    text.justification = LabelJustification;
-                    text.fillColor = LabelColor;
-                    text.fontSize = LabelFontSize;
-                    if (!LabelShowZero) {
-                        text.content = digit.toFixed(LabelNumberPrecision);
-                    }
-                    PermanentElements.addChild(text);                            
-                };
-                
-                /**
                  * Draw a line. Used to draw the major and minor gridlines,
                  * and major and minor axis checkmarks.
                  * @param {Integer} x1 
@@ -245,7 +201,7 @@ function runApp(array, type) {
                 };
                 
                 /**
-                 * Draw the axis line and arrow at the end
+                 * Draw a line with an arrow top. Used for the axes.
                  * @param {PaperScope.Point} startPoint - Paper.js Point object
                  * @param {PaperScope.Point} endPoint - Paper.js Point object
                  */
@@ -273,11 +229,56 @@ function runApp(array, type) {
                     PermanentElements.addChild(vectorItem);
                 };
 
+                /**
+                 * Draw the text for the axis labels (not axis name).
+                 * @param {Integer} digit - integer from the iteration
+                 * @param {Integer} x1 - X-coordinate to draw
+                 * @param {Integer} y1 - Y-coordinate to draw
+                 * @param {String} Justification - Text justification (left, right, center)
+                 * @param {String} Color - Text color
+                 * @param {Integer} FontSize - Text font size
+                 * @param {Boolean} ShowZero - Show zero value at origin
+                 * @param {Number} NumberPrecision - Decimal precision (0 for integers)
+                 */
+                function draw_label_text(digit, x1, y1, Justification, Color, FontSize, ShowZero, NumberPrecision) {
+                    var text = new scope.PointText(new scope.Point(x1, y1));
+                    text.justification = Justification;
+                    text.fillColor = Color;
+                    text.fontSize = FontSize;
+                    if (!ShowZero) {
+                        text.content = digit.toFixed(NumberPrecision);
+                    }
+                    PermanentElements.addChild(text);                            
+                };
+
+                /**
+                 * In Chrome and Edge gridlines are blurred as they are drawn over 2 pixels.
+                 * Fix by shifting gridlines 0.5 pixel.
+                 * !CAUTION! Fix is unsafe because it checks userAgent string, which is not "unique".
+                 * @param {Number} number - current pixels
+                 * @param {Number} value - pixel shift
+                 * @returns 
+                 */
+                function even_fix(number, value) {
+                    var isChromeEdge = false;
+                    var agent = navigator.userAgent;
+                    if ((agent.indexOf("Chrome") !== -1) || (agent.indexOf("Edg") !== -1)) {
+                        console.log("Chrome/Edge browser identified to fix draw line pixel bug.")
+                        isChromeEdge = true;
+                    }
+                    if (isChromeEdge) {
+                        return number + value;
+                    }
+                    else {
+                        return number;
+                    }
+                };
+
                 /* Remove everything */
                 PermanentElements.removeChildren();
 
                 /* Compute distance between minor gridlines in browser coordinate system.
-                    Round because browser coordinates are always integers. */
+                   Round because browser coordinates are always integers. */
                 minorX_BrowserStep = Math.round((canvasDef.width  - canvasDef.hPad*2) / ((Math.abs(axes[1] - axes[0]) / minor_grid_lines.xStep)));
                 minorY_BrowserStep = Math.round((canvasDef.height - canvasDef.vPad*2) / ((Math.abs(axes[3] - axes[2]) / minor_grid_lines.yStep)));
 
@@ -292,210 +293,177 @@ function runApp(array, type) {
                 console.log("Re-sizing canvas (width x height): " + canvasDef.width + " x " + canvasDef.height);
 
                 /* Compute distance between major gridlines in browser coordinate system.
-                    Round because browser coordinates are always integers. */
+                   Round because browser coordinates are always integers. */
                 majorX_BrowserStep = Math.round((canvasDef.width  - canvasDef.hPad*2) / ((Math.abs(axes[1] - axes[0]) / major_grid_lines.xStep)));
                 majorY_BrowserStep = Math.round((canvasDef.height - canvasDef.vPad*2) / ((Math.abs(axes[3] - axes[2]) / major_grid_lines.yStep)));
-                
-                /* Set deltax for extra points when clicking min/max button */
-                try { 
-                    if (deltax !== "") {
-                        deltax = parseFloat(deltax);
-                    } 
-                    else {
-                        deltax = (minor_grid_lines.xStep * majorX_BrowserStep / 2.0) ;
-                    }
-                } 
-                catch {
-                    deltax = (minor_grid_lines.xStep * majorX_BrowserStep / 2.0) ;
-                }
-
-                /* Set deltay for extra points when clicking min/max button */
-                try {
-                    if (deltay !== "") {
-                        deltay = parseFloat(deltay);
-                    } 
-                    else {
-                        deltay = (minor_grid_lines.yStep * majorY_BrowserStep / 5.0);
-                    }	 
-                } 
-                catch {
-                    deltay = (minor_grid_lines.yStep * majorY_BrowserStep / 5.0);
-                }
                 
                 /* y-axis position validation and set its x_coordinate */
                 if (axis_definition.y_axis_position != "auto" ) {
                     if (axis_definition.y_axis_position == "left") {
-                        x_axis_coordinate = canvasDef.hPad;
+                        y_axis_x_coordinate = canvasDef.hPad;
                     } 
                     else if (axis_definition.y_axis_position == "right") {
-                        x_axis_coordinate = canvasDef.width - canvasDef.hPad;
+                        y_axis_x_coordinate = canvasDef.width - canvasDef.hPad;
                     }
                     else {
-                        console.log("y axis position undefined, selector: " + axis_definition.y_axis_position + " unknown. [auto, left, right]");
-                        errormessages = "y axis position undefined, selector: " + axis_definition.y_axis_position + " unknown. [auto, left, right]";
+                        console.log("y_axis_position undefined, selector: " + axis_definition.y_axis_position + " unknown. [auto, left, right]");
                     }
-                } 
+                }
+                /* determine location when option is 'auto' */
                 else {
-                    if ((axes[0] > 0 && axes[1] > 0) || (axes[0] < 0 && axes[1] < 0)) {
-                        /* x_axis coordinates always larger/smaller than 0 (i.e., no intersection with y_axis at 0) */
-                        x_axis_coordinate = canvasDef.hPad; 
+                    /* x_axis start is >=0 AND axis end is >0 AND x_axis is not flipped */
+                    if (axes[0] >= 0 && axes[1] > 0 && !axis_definition.xAxisFlipped) {
+                        y_axis_x_coordinate = canvasDef.hPad; 
+                    }
+                    /* x_axis start is >=0 AND axis end is >0 AND x_axis is flipped */
+                    else if (axes[0] >= 0 && axes[1] > 0 && axis_definition.xAxisFlipped) {
+                        y_axis_x_coordinate = canvasDef.width - canvasDef.hPad;
+                    }
+                    /* x_axis start is <0 AND axis end is <=0 AND axis is not flipped */
+                    else if (axes[0] < 0 && axes[1] <= 0 && !axis_definition.xAxisFlipped) {
+                        y_axis_x_coordinate = canvasDef.width - canvasDef.hPad;
                     } 
-                    else if (axes[0] == 0 && !axis_definition.xAxisFlipped) {
-                        /* (left) x_axis starts at 0 and positive to the right */
-                        x_axis_coordinate = canvasDef.hPad;
+                    /* x_axis start is <0 AND axis end is <=0 AND axis is flipped */
+                    else if (axes[0] < 0 && axes[1] <= 0 && axis_definition.xAxisFlipped) {
+                        y_axis_x_coordinate = canvasDef.hPad;
                     } 
-                    else if (axes[0] == 0 && axis_definition.xAxisFlipped) {
-                        x_axis_coordinate = canvasDef.width-canvasDef.hPad;
-                        /* (right) x_axis starts at 0 and positive to the left (flipped) */
+                    /* x_axis crosses 0 and is not flipped, set to x = 0 coordinate */
+                    else if (!axis_definition.xAxisFlipped) {
+                        y_axis_x_coordinate =  Math.abs(axes[0]) / major_grid_lines.xStep * majorX_BrowserStep + canvasDef.hPad;
                     } 
-                    else if (axis_definition.xAxisFlipped) {
-                        /* x_axis is flipped, set to x = 0 coordinate */
-                        x_axis_coordinate = -Math.abs(axes[0]) / major_grid_lines.xStep * majorX_BrowserStep - canvasDef.hPad + canvasDef.width; 
-                    } 
+                    /* x_axis crosses 0 and is flipped, set to x = 0 coordinate */
                     else {
-                        /* Set to x = 0 coordinate */
-                        x_axis_coordinate = Math.abs(axes[0])/major_grid_lines.xStep * majorX_BrowserStep  + canvasDef.hPad;
+                        y_axis_x_coordinate = -Math.abs(axes[0]) / major_grid_lines.xStep * majorX_BrowserStep - canvasDef.hPad + canvasDef.width; 
                     }
                 }
 
                 /* x-axis position validation and set its y_coordinate */
                 if (axis_definition.x_axis_position != "auto" ) {
                     if (axis_definition.x_axis_position == "top") {
-                        y_axis_coordinate = canvasDef.vPad;
+                        x_axis_y_coordinate = canvasDef.vPad;
                     } 
                     else if (axis_definition.x_axis_position == "bottom") {
-                        y_axis_coordinate = canvasDef.height-canvasDef.vPad;
+                        x_axis_y_coordinate = canvasDef.height - canvasDef.vPad;
                     } 
                     else {
-                        console.log("x axis position undefined, selector: " + axis_definition.x_axis_position + " unknown. [auto, top, bottom]");
-                        errormessages ="x axis position undefined, selector: " + axis_definition.x_axis_position + " unknown. [auto, top, bottom]";
+                        console.log("x_axis_position undefined, selector: " + axis_definition.x_axis_position + " unknown. [auto, top, bottom]");
                     }
                 } 
+                /* determine location when option is 'auto' */
                 else {
-                    if ((axes[2] > 0 && axes[3] > 0) || (axes[2] < 0 && axes[3] < 0)) {
-                        /* y_axis coordinates always larger/smaller than 0 (i.e., no intersection with x_axis at 0) */
-                        y_axis_coordinate = canvasDef.vPad;
+                    /* y_axis start is >=0 AND end is >0 AND axis is not flipped */
+                    if (axes[2] >= 0 && axes[3] > 0 && !axis_definition.yAxisFlipped) {
+                        x_axis_y_coordinate = canvasDef.height - canvasDef.vPad;
+                    }
+                    /* y_axis start is >=0 AND end is >0 AND axis is flipped */ 
+                    else if (axes[2] >= 0 && axes[3] > 0 && axis_definition.yAxisFlipped) {
+                        x_axis_y_coordinate = canvasDef.vPad;
                     } 
-                    else if (axes[2] == 0 && !axis_definition.yAxisFlipped) {
-                        /* (bottom) y_axis starts at 0 and positive upwards */
-                        y_axis_coordinate = canvasDef.height-canvasDef.vPad;
+                    /* y_axis start is <0 AND end is <=0 AND axis is not flipped */
+                    else if (axes[2] < 0 && axes[3] <= 0 && !axis_definition.yAxisFlipped) {
+                        x_axis_y_coordinate = canvasDef.vPad;
+                    }
+                    /* y_axis start is <0 AND end is <=0 AND axis is flipped */ 
+                    else if (axes[2] < 0 && axes[3] <= 0 && axis_definition.yAxisFlipped) {
+                        x_axis_y_coordinate = canvasDef.height - canvasDef.vPad;
                     } 
-                    else if (axes[2] == 0 && axis_definition.yAxisFlipped) {
-                        /* (top) y_axis starts at 0 and positive downwards */
-                        y_axis_coordinate = canvasDef.vPad;
+                    /* y_axis crosses zero and is not flipped, set to y = 0 coordinate */
+                    else if (!axis_definition.yAxisFlipped) {
+                        x_axis_y_coordinate =  Math.abs(axes[3])/major_grid_lines.yStep * majorY_BrowserStep + canvasDef.vPad; 
                     } 
-                    else if (axis_definition.yAxisFlipped) {
-                        /* y_axis is flipped, set to y = 0 coordinate */
-                        y_axis_coordinate = -Math.abs(axes[3])/major_grid_lines.yStep * majorY_BrowserStep  - canvasDef.vPad + canvasDef.height; 
-                    } 
+                    /* y_axis crosses zero and is flipped, set to y = 0 coordinate */
                     else {
-                        /* Set to y = 0 coordinate */
-                        y_axis_coordinate = (Math.abs(axes[3])/major_grid_lines.yStep * majorY_BrowserStep  + canvasDef.vPad); 
+                        x_axis_y_coordinate = -Math.abs(axes[3])/major_grid_lines.yStep * majorY_BrowserStep - canvasDef.vPad + canvasDef.height;
                     }
                 }
 
                 if (!axis_definition.xAxisFlipped) {
+                    /* Draw x_axis, not flipped. Extend line 0.5*hPad beyond graph area */
                     if (axis_definition.xAxisArrow) {
-                        /* Draw x_axis, not flipped. Extend line 0.5*hPad beyond draw area */
-                        draw_arrow(new scope.Point(canvasDef.hPad, y_axis_coordinate), new scope.Point(canvasDef.width - canvasDef.hPad/2, y_axis_coordinate));
+                        draw_arrow(new scope.Point(canvasDef.hPad, x_axis_y_coordinate), new scope.Point(canvasDef.width - canvasDef.hPad/2, x_axis_y_coordinate));
                     }
-                    /* FIX FOR CHROME 32 BIT +0,5 PIXEL */
                     var x_temp = even_fix(canvasDef.hPad, 0.5);
-                    for (var i = axes[0]; i <= axes[1] ; i = i + major_grid_lines.xStep) {
-                        /* Draw major vertical grid line */
-                        draw_line(x_temp, canvasDef.vPad, x_temp, canvasDef.height - canvasDef.vPad, major_grid_lines.lineWidth, major_grid_lines.lineColor);
-                        /* Draw major vertical checkmark */
-                        draw_line(x_temp, y_axis_coordinate + major_grid_lines.checkmark_offset, x_temp, 
-                            y_axis_coordinate - major_grid_lines.checkmark_offset, major_grid_lines.checkmark_width, major_grid_lines.checkmark_color);
-                        /* Draw x_axis major checkmark labels */
-                        draw_label_text(i, x_temp + axis_definition.xLabelPositionHorizontal, y_axis_coordinate + axis_definition.xLabelPositionVertical, 
-                            axis_definition.xLabelJustification, axis_definition.xLabelColor, axis_definition.xLabelFontSize, axis_definition.xLabelShowZero ,axis_definition.xLabelNumberPrecision);
+                }
+                else {
+                    /* Draw x_axis, flipped. Extend line 0.5*hPad beyond graph area */
+                    if (axis_definition.xAxisArrow) {
+                        draw_arrow(new scope.Point(canvasDef.width - canvasDef.hPad, x_axis_y_coordinate), new scope.Point(canvasDef.hPad/2, x_axis_y_coordinate));
+                    }
+                    var x_temp = even_fix(canvasDef.width - canvasDef.hPad, -0.5);
+                }
+                for (var i = axes[0]; i <= axes[1] ; i = i + major_grid_lines.xStep) {
+                    /* Draw major vertical grid line */
+                    draw_line(x_temp, canvasDef.vPad, x_temp, canvasDef.height - canvasDef.vPad, major_grid_lines.lineWidth, major_grid_lines.lineColor);
+                    /* Draw major vertical checkmark */
+                    draw_line(x_temp, x_axis_y_coordinate + major_grid_lines.checkmark_offset, x_temp, x_axis_y_coordinate - major_grid_lines.checkmark_offset, 
+                        major_grid_lines.checkmark_width, major_grid_lines.checkmark_color);
+                    /* Draw x_axis labels */
+                    draw_label_text(i, x_temp + axis_definition.xLabelPositionHorizontal, x_axis_y_coordinate + axis_definition.xLabelPositionVertical, 
+                        axis_definition.xLabelJustification, axis_definition.xLabelColor, axis_definition.xLabelFontSize, axis_definition.xLabelShowZero, 
+                        axis_definition.xLabelNumberPrecision);
+                    if (!axis_definition.xAxisFlipped) {
                         x_temp = (x_temp + majorX_BrowserStep);
                     }
-                } 
-                else {
-                    /* Draw x_axis, flipped. Extend line 0.5*hPad beyond draw area */
-                    if (axis_definition.xAxisArrow) {
-                        draw_arrow(new scope.Point(canvasDef.width - canvasDef.hPad, y_axis_coordinate), new scope.Point(canvasDef.hPad/2, y_axis_coordinate));
-                    }
-                    /* FIX FOR CHROME 32 BIT +0,5 PIXEL */
-                    x_temp = even_fix(canvasDef.width - canvasDef.hPad, -0.5);
-                    for (var i = axes[0]; i <= axes[1] ; i = i + major_grid_lines.xStep) {
-                        /* Draw major vertical grid line */
-                        draw_line(x_temp, canvasDef.vPad, x_temp, canvasDef.height - canvasDef.vPad, major_grid_lines.lineWidth, major_grid_lines.lineColor);
-                        /* Draw major vertcial checkmark */
-                        draw_line(x_temp, y_axis_coordinate + major_grid_lines.checkmark_offset, x_temp, y_axis_coordinate - major_grid_lines.checkmark_offset, 
-                            major_grid_lines.checkmark_width, major_grid_lines.checkmark_color);
-                        /* Draw x_axis major checkmark labels */
-                        draw_label_text(i, x_temp + axis_definition.xLabelPositionHorizontal, y_axis_coordinate + axis_definition.xLabelPositionVertical, 
-                            axis_definition.xLabelJustification, axis_definition.xLabelColor, axis_definition.xLabelFontSize , axis_definition.xLabelShowZero ,axis_definition.xLabelNumberPrecision);
+                    else {
                         x_temp = (x_temp - majorX_BrowserStep);
                     }
                 }
 
                 if (!axis_definition.yAxisFlipped) {
+                    /* Draw y_axis, not flipped. Extend line 0.5*vPad beyond graph area */
                     if (axis_definition.yAxisArrow) {
-                        /* Draw y_axis, not flipped. Extend line 0.5*vPad beyond draw area */
-                        draw_arrow(new scope.Point(x_axis_coordinate, canvasDef.height - canvasDef.vPad), new scope.Point(x_axis_coordinate, canvasDef.vPad/2));
+                        draw_arrow(new scope.Point(y_axis_x_coordinate, canvasDef.height - canvasDef.vPad), new scope.Point(y_axis_x_coordinate, canvasDef.vPad/2));
                     }
-                    /* FIX FOR CHROME 32 BIT +0,5 PIXEL */
-                    var y_temp = even_fix(canvasDef.vPad, 0.5);
-                    for (var i = axes[3]; i >= axes[2] ; i = i - major_grid_lines.yStep) {
-                        /* Draw major horizontal grid line */
-                        draw_line(canvasDef.hPad, y_temp, canvasDef.width-canvasDef.hPad, y_temp ,major_grid_lines.lineWidth, major_grid_lines.lineColor);
-                        /* Draw major horizontal checkmark */
-                        draw_line(x_axis_coordinate + major_grid_lines.checkmark_offset, y_temp, x_axis_coordinate - major_grid_lines.checkmark_offset, 
-                            y_temp, major_grid_lines.checkmark_width, major_grid_lines.checkmark_color);
-                        /* Draw y_axis major checkmark labels */
-                        draw_label_text(i, x_axis_coordinate + axis_definition.yLabelPositionHorizontal, y_temp + axis_definition.yLabelPositionVertical, 
-                            axis_definition.yLabelJustification, axis_definition.yLabelColor, axis_definition.yLabelFontSize ,axis_definition.yLabelShowZero, axis_definition.yLabelNumberPrecision);
-                        y_temp = y_temp + majorY_BrowserStep;
-                    }
-                } else {
-                    if (axis_definition.yAxisArrow){
-                        /* Draw y_axis, flipped. Extend line 0.5*vPad beyond draw area */
-                        draw_arrow(new scope.Point(x_axis_coordinate, canvasDef.vPad), new scope.Point(x_axis_coordinate, canvasDef.height-canvasDef.vPad/2));
-                    }
-                    /* FIX FOR CHROME 32 BIT +0,5 PIXEL */
-                    var y_temp = even_fix(canvasDef.vPad, 0.5);
-                    for (var i = axes[2]; i <= axes[3] ; i = i + major_grid_lines.yStep) {
-                        /* Draw major horizontal grid line */
-                        draw_line(canvasDef.hPad, y_temp, canvasDef.width - canvasDef.hPad, y_temp, major_grid_lines.lineWidth, major_grid_lines.lineColor);
-                        /* Draw major horizontal checkmark */
-                        draw_line(x_axis_coordinate + major_grid_lines.checkmark_offset, y_temp, x_axis_coordinate - major_grid_lines.checkmark_offset, y_temp,
-                            major_grid_lines.checkmark_width, major_grid_lines.checkmark_color);
-                        /* Draw y_axis major checkmark labels */
-                        draw_label_text(i, x_axis_coordinate + axis_definition.yLabelPositionHorizontal, y_temp + axis_definition.yLabelPositionVertical, 
-                            axis_definition.yLabelJustification, axis_definition.yLabelColor, axis_definition.yLabelFontSize, axis_definition.yLabelShowZero, axis_definition.yLabelNumberPrecision);
-                        y_temp = y_temp + majorY_BrowserStep;
-                    }
+                    var y_temp = even_fix(canvasDef.height - canvasDef.vPad, 0.5);
                 }
+                else {
+                    /* Draw y_axis, flipped. Extend line 0.5*vPad beyond graph area */
+                    if (axis_definition.yAxisArrow){
+                        draw_arrow(new scope.Point(y_axis_x_coordinate, canvasDef.vPad), new scope.Point(y_axis_x_coordinate, canvasDef.height-canvasDef.vPad/2));
+                    }
+                    var y_temp = even_fix(canvasDef.vPad, 0.5);
+                }
+                for (var i = axes[2]; i <= axes[3] ; i = i + major_grid_lines.yStep) {
+                    /* Draw major horizontal grid line */
+                    draw_line(canvasDef.hPad, y_temp, canvasDef.width - canvasDef.hPad, y_temp, major_grid_lines.lineWidth, major_grid_lines.lineColor);
+                    /* Draw major horizontal checkmark */
+                    draw_line(y_axis_x_coordinate + major_grid_lines.checkmark_offset, y_temp, y_axis_x_coordinate - major_grid_lines.checkmark_offset, y_temp, 
+                        major_grid_lines.checkmark_width, major_grid_lines.checkmark_color);
+                    /* Draw y_axis labels */
+                    draw_label_text(i, y_axis_x_coordinate + axis_definition.yLabelPositionHorizontal, y_temp + axis_definition.yLabelPositionVertical, 
+                        axis_definition.yLabelJustification, axis_definition.yLabelColor, axis_definition.yLabelFontSize ,axis_definition.yLabelShowZero, 
+                        axis_definition.yLabelNumberPrecision);
+                    if (!axis_definition.yAxisFlipped) {
+                        y_temp = y_temp - majorY_BrowserStep;
+                    }
+                    else {
+                        y_temp = y_temp + majorY_BrowserStep;
+                    }
+                } 
 
-                /* FIX FOR CHROME 32 BIT +0,5 PIXEL */
                 x_temp = even_fix(canvasDef.hPad, 0.5);
                 for (var i = axes[0]; i <= axes[1] ; i = i + minor_grid_lines.xStep) {
                     /* Draw minor vertical grid line */
                     draw_line(x_temp, canvasDef.vPad, x_temp, canvasDef.height - canvasDef.vPad, minor_grid_lines.lineWidth, minor_grid_lines.lineColor);
-                    /* Draw minor vertical (x-axis) checkmark */
-                    draw_line(x_temp, y_axis_coordinate + minor_grid_lines.checkmark_offset, x_temp, y_axis_coordinate - minor_grid_lines.checkmark_offset,
+                    /* Draw minor vertical checkmark (along x-axis) */
+                    draw_line(x_temp, x_axis_y_coordinate + minor_grid_lines.checkmark_offset, x_temp, x_axis_y_coordinate - minor_grid_lines.checkmark_offset,
                         minor_grid_lines.checkmark_width, minor_grid_lines.checkmark_color);
-                    x_temp = (x_temp + minorX_BrowserStep);
+                    x_temp = x_temp + minorX_BrowserStep;
                 }
 
-                /* FIX FOR CHROME 32 BIT +0,5 PIXEL */
-                y_temp = even_fix(canvasDef.vPad, 0.5);
-                for (var i = axes[3]; i >= axes[2] ; i = i - minor_grid_lines.yStep) {
+                y_temp = even_fix(canvasDef.height - canvasDef.vPad, 0.5);
+                for (var i = axes[2]; i <= axes[3] ; i = i + minor_grid_lines.yStep) {
                     /* Draw minor horizontal grid line */
                     draw_line(canvasDef.hPad, y_temp, canvasDef.width - canvasDef.hPad, y_temp, minor_grid_lines.lineWidth, minor_grid_lines.lineColor);
-                    /* Draw minor horizontal (y-axis) checkmark */
-                    draw_line(x_axis_coordinate + minor_grid_lines.checkmark_offset, y_temp, x_axis_coordinate - minor_grid_lines.checkmark_offset, y_temp,
+                    /* Draw minor horizontal checkmark (along y-axis) */
+                    draw_line(y_axis_x_coordinate + minor_grid_lines.checkmark_offset, y_temp, y_axis_x_coordinate - minor_grid_lines.checkmark_offset, y_temp,
                         minor_grid_lines.checkmark_width, minor_grid_lines.checkmark_color);
-                    y_temp = y_temp + minorY_BrowserStep;
+                    y_temp = y_temp - minorY_BrowserStep;
                 }
 
-                /* x_axis name label */
+                /* Draw the x_axis name */
                 if (axis_definition.xAxisName != "") {
-                    var text = new scope.PointText(new scope.Point(canvasDef.width/2 + axis_definition.xAxisNameHorizontal, y_axis_coordinate+axis_definition.xAxisNameVertical));
+                    var text = new scope.PointText(new scope.Point(canvasDef.width/2 + axis_definition.xAxisNameHorizontal, x_axis_y_coordinate+axis_definition.xAxisNameVertical));
                     text.justification = axis_definition.xAxisNameJustification;
                     text.fillColor = axis_definition.xAxisNameFontColor;
                     text.fontSize = axis_definition.xAxisNameFontSize;
@@ -503,9 +471,9 @@ function runApp(array, type) {
                     PermanentElements.addChild(text);
                 }
 
-                /* y_axis name label */
+                /* Draw the y_axis label */
                 if (axis_definition.yAxisName != "") {
-                    var text = new scope.PointText(new scope.Point(x_axis_coordinate + axis_definition.yAxisNameHorizontal, canvasDef.height/2 + axis_definition.yAxisNameVertical));
+                    var text = new scope.PointText(new scope.Point(y_axis_x_coordinate + axis_definition.yAxisNameHorizontal, canvasDef.height/2 + axis_definition.yAxisNameVertical));
                     text.rotate(axis_definition.yAxisNameOrientation);
                     text.justification = axis_definition.yAxisNameJustification;
                     text.fillColor = axis_definition.yAxisNameFontColor;
@@ -563,8 +531,8 @@ function runApp(array, type) {
                     x_axis, y_axis, x_axis labels, y_axis labels,
                     major grid lines, minor grid lines,
                     major checkmarks, minor checkmarks,
-                    major checkmark labels,
-                    backgroundline */
+                    x_axis name, y_axis name,
+                    backgroundlines */
                 scope.project.activeLayer.addChild(PermanentElements);
             };
 
@@ -602,8 +570,7 @@ function runApp(array, type) {
                             var circle = new scope.Shape.Circle(PointsLocation[i], circle_radius);
                             circle.strokeColor = 'black';
                             /* If circle is selected, change fillColor to red */
-                            // if (selected_x !== null && selected_y !== null && (Math.abs(PointsLocation[i].x - selected_x) < hitOptions.tolerance)) {
-                            if (selected_x !== null && selected_y !== null && (mouseStartLocation.getDistance(PointsLocation[i]) < hitOptions.tolerance)) {
+                            if (selected_x !== null && selected_y !== null && hitPoint.getDistance(PointsLocation[i]) < hitOptions.tolerance) {
                                 circle.fillColor = 'red';
                             }
                             DrawnPoints.addChild(circle);
@@ -668,12 +635,12 @@ function runApp(array, type) {
 
             function interact() {
                 tool.onMouseDown = function(click) {
-                    var hitPoint = new scope.Point(click.event.offsetX, click.event.offsetY);
+                    hitPoint = click.point;
                     var hitResult = DrawnPoints.hitTest(hitPoint, hitOptions);
                     if (!hitResult) {
                         if (selected_x !== null || selected_y !== null ) {
                             selected_x = null;
-                            selected_y = null ;
+                            selected_y = null;
                         }
                         else {
                             /* First point */
@@ -705,21 +672,24 @@ function runApp(array, type) {
                     } 
                     else {
                         selected_x = click.event.offsetX;  
-                        selected_y = click.event.offsetY ;
+                        selected_y = click.event.offsetY;
                     }
                     draw_spline();
                 };
 
                 tool.onMouseDrag = function(click) {
-                    mouseStartLocation = click.point;
+                    var mouseStartLocation = click.point;
                     var mouseMovedDistance = click.delta;
-                    var results =[];
+                    var results = [];
                     for (var i = 0 ; i < PointsLocation.length ; i++) {
-                        if (mouseStartLocation.getDistance(PointsLocation[i]) < hitOptions.tolerance){
-                            /* check if it's only one point. If more than 1 point, remove them */
+                        /* Check if the dragged point is close to an already existing point,
+                           push the points to "results" */
+                        if (mouseStartLocation.getDistance(PointsLocation[i]) < hitOptions.tolerance) {
                             results.push(i);
+                            console.log(results);
                         }
                     }
+                    /* Remove existing point by splicing */
                     for (i = (results.length-1) ; i >= 1 ; i--) {
                         PointsLocation.splice(results[i], 1);
                         FittedSplineBrowserX.splice(results[i], 1);
@@ -735,14 +705,21 @@ function runApp(array, type) {
             }
 
             function buttons(){
-                var delPoint = $('#delPoint');
+                var delPoint = $('#delPoint');   /* Delete the selected point */
+                var delAll = $('#delAll');       /* Delete all points */
+                var buttonMin = $('#buttonMin'); /* Force the selected point to be a local minimum */
+                var buttonMax = $('#buttonMax'); /* Force the selected point to be a local maximum */
+                var toggleContrast = $('#toggleContrast'); /* Toggle sliders to adjust gridlines */
+                var gridMajor = $('#gridMajor'); /* Change major gridline greyscale */
+                var gridMinor = $('#gridMinor'); /* Change minor gridline greyscale */
+                
                 /* delete point */
                 delPoint.click(function() { 
                     /* loops through all the drawn points */
                     for (i = 0 ; i < PointsLocation.length ; i++) {
                         /* if difference between (x,y) coordinate of point and (x,y) coordinate of selected (clicked on screen)
                             is less than 10, point is found and remove that point from array */
-                        if ((Math.abs(PointsLocation[i].x - selected_x) < 10) && (Math.abs(PointsLocation[i].y - selected_y) < 10)) {
+                        if ((Math.abs(PointsLocation[i].x - selected_x) < hitOptions.tolerance) && (Math.abs(PointsLocation[i].y - selected_y) < hitOptions.tolerance)) {
                             PointsLocation.splice(i, 1);
                             FittedSplineBrowserX.splice(i, 1);
                             FittedSplineBrowserY.splice(i, 1);
@@ -754,7 +731,6 @@ function runApp(array, type) {
                     draw_spline();
                 });
 
-                var delAll = $('#delAll');
                 /* delete all points */
                 delAll.click(function() { 
                     /* splice(0, .length) removes all items from array */
@@ -763,67 +739,58 @@ function runApp(array, type) {
                     FittedSplineBrowserY.splice(0, FittedSplineBrowserY.length);
                     DrawnPoints.removeChildren();
                     SplinePoints.removeChildren();
-                    /* draw spline */
-                    draw_spline();
                 });
                 
-                var buttonMin = $('#buttonMin');
                 /* min function */
                 buttonMin.click(function() {
                     /* loops through all the drawn points */
-                    for (i = 0 ; i < PointsLocation.length ; i++ ){
+                    for (i = 0 ; i < PointsLocation.length ; i++ ) {
                         /* if difference between (x,y) coordinate of point and (x,y) coordinate where clicked on screen
-                            is less than 10, point is found and remove that point from array */
-                        if ((Math.abs(PointsLocation[i].x - selected_x) < 10) && (Math.abs(PointsLocation[i].y - selected_y) < 10)) {
-                            /* 'temporarily' save y-coordinate of selected point */
-                            var tempy = PointsLocation[i].y;
+                            is less than hitOptions.tolerance, point is found and remove that point from array */
+                        if ((Math.abs(PointsLocation[i].x - selected_x) < hitOptions.tolerance) && (Math.abs(PointsLocation[i].y - selected_y) < hitOptions.tolerance)) {
                             /* insert point before selected point, move point w.r.t. selected point by deltax and deltay */
-                            PointsLocation.splice(i,0, new scope.Point(selected_x - interaction_settings.deltax, tempy - interaction_settings.deltay ));          
-                            FittedSplineBrowserX.splice(i, 0, selected_x - interaction_settings.deltax );
-                            FittedSplineBrowserY.splice(i, 0, tempy - interaction_settings.deltay);
+                            PointsLocation.splice(i,0, new scope.Point(PointsLocation[i].x - interaction_settings.deltax, PointsLocation[i].y - interaction_settings.deltay ));          
+                            FittedSplineBrowserX.splice(i, 0, PointsLocation[i].x - interaction_settings.deltax );
+                            FittedSplineBrowserY.splice(i, 0, PointsLocation[i].y - interaction_settings.deltay);
                             /* insert point after selected point, move point w.r.t. selected point by deltax and deltay */
-                            PointsLocation.splice(i+2, 0, new scope.Point(selected_x + interaction_settings.deltax, tempy - interaction_settings.deltay ) );
-                            FittedSplineBrowserX.splice(i+2, 0, selected_x + interaction_settings.deltax);
-                            FittedSplineBrowserY.splice(i+2, 0, tempy - interaction_settings.deltay);
+                            PointsLocation.splice(i+2, 0, new scope.Point(PointsLocation[i].x + interaction_settings.deltax, PointsLocation[i].y - interaction_settings.deltay ) );
+                            FittedSplineBrowserX.splice(i+2, 0, PointsLocation[i].x + interaction_settings.deltax);
+                            FittedSplineBrowserY.splice(i+2, 0, PointsLocation[i].y - interaction_settings.deltay);
                             break;
                         }
                     }
                     /* deselect point and draw new spline */
                     selected_x = null;
-                    selected_y = null ;
+                    selected_y = null;
                     draw_spline();
                 });
                 
-                var buttonMax = $('#buttonMax');
                 /* max function */
                 buttonMax.click(function() { 
                     /* loops through all the drawn points */
                     for (i = 0 ; i < PointsLocation.length ; i++ ){
                         /* if difference between (x,y) coordinate of point and (x,y) coordinate where clicked on screen
-                            is less than 10, point is found and remove that point from array */
-                        if ((Math.abs(PointsLocation[i].x - selected_x) < 10) && (Math.abs(PointsLocation[i].y - selected_y) < 10)) {
-                            /* 'temporarily' save y-coordinate of selected point */
-                            var tempy = PointsLocation[i].y;
+                           is less than hitOptions.tolerance, point is found and remove that point from array */
+                        if ((Math.abs(PointsLocation[i].x - selected_x) < hitOptions.tolerance) && (Math.abs(PointsLocation[i].y - selected_y) < hitOptions.tolerance)) {
                             /* insert point before selected point, move point w.r.t. selected point by deltax and deltay */
-                            PointsLocation.splice(i,0, new scope.Point(selected_x - interaction_settings.deltax, tempy + interaction_settings.deltay ));               
-                            FittedSplineBrowserX.splice(i, 0, selected_x - interaction_settings.deltax);
-                            FittedSplineBrowserY.splice(i, 0, tempy + interaction_settings.deltay);
+                            PointsLocation.splice(i,0, new scope.Point(PointsLocation[i].x - interaction_settings.deltax, PointsLocation[i].y + interaction_settings.deltay ));               
+                            FittedSplineBrowserX.splice(i, 0, PointsLocation[i].x - interaction_settings.deltax);
+                            FittedSplineBrowserY.splice(i, 0, PointsLocation[i].y + interaction_settings.deltay);
                             /* insert point after selected point, move point w.r.t. selected point by deltax and deltay */
-                            PointsLocation.splice(i+2, 0, new scope.Point(selected_x + interaction_settings.deltax, tempy + interaction_settings.deltay ));
-                            FittedSplineBrowserX.splice(i+2, 0, selected_x + interaction_settings.deltax);
-                            FittedSplineBrowserY.splice(i+2, 0, tempy + interaction_settings.deltay);
+                            PointsLocation.splice(i+2, 0, new scope.Point(PointsLocation[i].x + interaction_settings.deltax, PointsLocation[i].y + interaction_settings.deltay ));
+                            FittedSplineBrowserX.splice(i+2, 0, PointsLocation[i].x + interaction_settings.deltax);
+                            FittedSplineBrowserY.splice(i+2, 0, PointsLocation[i].y + interaction_settings.deltay);
                             break;
                         }
                     }
                     /* deselect point and draw new spline */
                     selected_x = null;
-                    selected_y = null ;
+                    selected_y = null;
                     draw_spline();
                 });
 
-                var cont = $('#toggleContrast');
                 /* toggle contrast settings */
-                cont.click(function() {
+                toggleContrast.click(function() {
                     /* get div element with id: contrast */
                     var div_contrast = document.getElementById('contrast');
                     /* Default style.display is 'none', thus the div is hidden.
@@ -837,28 +804,18 @@ function runApp(array, type) {
                     }
                 });
                 
-                var gridMajor = $('#gridMajor');
                 /* major grid lines slider */
                 gridMajor.click(function() { 
-                    /* clears #myCanvas */
-                    scope.project.clear();
+                    PermanentElements.removeChildren();
                     major_grid_lines.lineColor = gridMajor.val()/10;
-                    /* redraw axis */
                     draw_axis();
-                    /* draw spline */
-                    draw_spline();
                 });
                 
-                var gridMinor = $('#gridMinor');
                 /* minor grid lines slider */
                 gridMinor.click(function() { 
-                    /* clears #myCanvas */
-                    scope.project.clear();
+                    PermanentElements.removeChildren();
                     minor_grid_lines.lineColor = gridMinor.val()/10;
-                    /* redraw axis */
                     draw_axis();
-                    /* draw spline */
-                    draw_spline();
                 });
                 console.log("Button functionality ready");
             };
