@@ -1,19 +1,19 @@
-/*
------INSERT OLD AND NEW PATCH NOTES-----
-text
-
------TO FIX-----
-text
-
------TO DO/CHANGE-----
-Split axis_definition into X-axis (line, labels), Y-axis (line, labels) and axis-arrow (for adjustability).
-Keep circle fill color red when dragging point.
-
------ALERTS-----
-Switched x/y positions of min/max in Response array! Adjust in (old) grading code of question in Question Bank!
-In case a min/max outside domain of the spline is found, a simple solution is used by redefining the min/max to the edge of the domain.
-Browser detection method is unreliable due to use of navigator.userAgent
-*/
+/****** NOTES ******
+ * This app requires two other scripts:
+ * cubic_spline.js 
+ * paper-full.js v0.12.17
+ * Also uses jQuery
+ * 
+ * version 3.0
+ * 5 April 2023
+ * Developed for Möbius (Digital Ed)
+ * 
+ * Creator: Anatoly Ilin
+ * Latest version by: Mario van den Berg
+ * 
+ * Note, you might need to change the path for jQuery.getScript()
+ * 
+ */
 
 function runApp(array, type) {
     console.log("Welcome to the SketchApp! \n Running version 3.0 \n Release date: 5 April 2023 \n By: Anatoly Ilin & Mario van den Berg");

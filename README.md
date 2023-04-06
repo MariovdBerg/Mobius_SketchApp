@@ -3,9 +3,9 @@ An interactive tool to draw monotonic cubic splines on a canvas within the Digit
 
 ## Javascripts to run the SketchApp
 	paper-full.js (gets the canvas, draws axes and provides interaction with canvas)
-	cubic_spline.js (used to interpolate a monotonic cubic spline between the drawn points)
-	RunApp_v2-10.js (last version by Anatoly)
-	RunApp_v2-11.js (refactored version by Mario)
+	cubic_spline.js (used to interpolate a monotonic cubic spline)
+	SketchApp_v2-10.js (last version by Anatoly Ilin)
+	SketchApp_v3-0.js  (latest version by Mario van den Berg)
 	
 ## For Möbius:
 	manifest.xml (exported question from Möbius)
@@ -32,3 +32,19 @@ RunApp_v2-11.js compatibility is checked for 4 browsers
 	Firefox: 109.00 (64-bit)
 	Edge: 110.0.1587.50 (64-bit)
 	Safari: unknown, whatever version was latest early February 2023
+
+## PATCH NOTES:
+Version 3.0
+
+*****PATCH NOTES*****
+- Big code overhaul:
+--- Fixed a lot of function nesting
+--- Fixed 
+
+******TO FIX*****
+Keep circle fill color red when dragging point.
+
+******ALERTS******
+Spline is not drawn when only two points exist, unless either point is dragged at least once.
+In case a min/max outside domain of the spline is found, a simple solution is used by redefining the min/max to the edge of the domain.
+Browser detection method is unreliable due to use of navigator.userAgent
