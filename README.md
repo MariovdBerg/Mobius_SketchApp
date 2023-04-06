@@ -23,6 +23,8 @@ Older:
 ## Documentation
 To fully understand the SketchApp, documentation has been written: SketchApp_Documentation_V1.pdf. Further, only a template to setting up the SketchApp in Möbius is provided. Getting experienced with the tool is up to the user.
 
+## Support files
+An assortment of files for those interested. Especially interesting are the cubic_spline.js, SplineComparison.mw and SplineDerivatives.mw files.
 
 ## Compatibility
 RunApp_v3-0.js compatibility is checked for 4 browsers
@@ -55,3 +57,4 @@ RunApp_v3-0.js compatibility is checked for 4 browsers
 ## To do
 - Adapt code for better debugging
 - Include interpolated spline for correct answer in response. To be used for grading
+- Provide template HTML response area with the SketchApp
