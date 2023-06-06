@@ -27,7 +27,7 @@ To fully understand the SketchApp, documentation has been written: SketchApp_Doc
 An assortment of files for those interested. Especially interesting are the cubic_spline.js, SplineComparison.mw and SplineDerivatives.mw files.
 
 ## Compatibility
-RunApp_v3-0.js compatibility is checked for 4 browsers
+RunApp_v3.0.js compatibility is checked for 4 browsers
 
 	Chrome: 111.0.5563.147 (64-bit)
 	Firefox: 110.00 (64-bit)
