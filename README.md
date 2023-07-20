@@ -35,6 +35,11 @@ RunApp_v3.0.js compatibility is checked for 4 browsers
 	Safari: unknown, tested early April 2023
 
 ## PATCH NOTES
+**Version 3.1**
+*Code*
+- Fixed a bug where the spline would not be drawn if two points are drawn
+- Fixed a bug where the spline was incorrectly drawn at the left end
+
 **Version 3.0**
 
 *Code*
