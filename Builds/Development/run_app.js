@@ -1,26 +1,26 @@
-/*
------INSERT OLD AND NEW PATCH NOTES-----
-text
-
------TO FIX-----
-text
-
------TO DO/CHANGE-----
-Split axis_definition into X-axis (line, labels), Y-axis (line, labels) and axis-arrow (for adjustability).
-Keep circle fill color red when dragging point.
-
------ALERTS-----
-Switched x/y positions of min/max in Response array! Adjust in (old) grading code of question in Question Bank!
-In case a min/max outside domain of the spline is found, a simple solution is used by redefining the min/max to the edge of the domain.
-Browser detection method is unreliable due to use of navigator.userAgent
-*/
+/****** NOTES ******
+ * This app requires two other scripts:
+ * cubic_spline.js 
+ * paper-full.js v0.12.17
+ * Also uses jQuery
+ * 
+ * version 3.0
+ * 5 April 2023
+ * Developed for Möbius (Digital Ed)
+ * 
+ * Creator: Anatoly Ilin
+ * Latest version by: Mario van den Berg
+ * 
+ * Note, you might need to change the path for jQuery.getScript()
+ * 
+ */
 
 function runApp(array, type) {
     console.log("Welcome to the SketchApp! \n Running version 3.0 \n Release date: 5 April 2023 \n By: Anatoly Ilin & Mario van den Berg");
     console.log("This version uses Paper.js v0.12.17");
 
-    jQuery.getScript('https://tudelft-exercise.mobius.cloud/web/Cie4305000/Public_Html/HTML_test/cubic_spline.js', function() {
-        jQuery.getScript('https://tudelft-exercise.mobius.cloud/web/Cie4305000/Public_Html/HTML_test/paper-full.js', function() {
+    jQuery.getScript('https://tudelft-exercise.mobius.cloud/web/Cie4305000/Public_Html/HTML_SketchApp/cubic_spline.js', function() {
+        jQuery.getScript('https://tudelft-exercise.mobius.cloud/web/Cie4305000/Public_Html/HTML_SketchApp/paper-full.js', function() {
             console.log("Scripts loaded succesfully!");
             /* Create a variable "scope" with the PaperScope object to access Paper.js classes. */
             /* Create a Tool object, necessary for the mouse interaction. */
@@ -233,7 +233,7 @@ function runApp(array, type) {
                     var isChromeEdge = false;
                     var agent = navigator.userAgent;
                     if ((agent.indexOf("Chrome") !== -1) || (agent.indexOf("Edg") !== -1)) {
-                        console.log("Chrome/Edge browser identified to fix draw line pixel bug.")
+                        console.log("Chrome/Edge browser identified to fix draw line pixel bug.");
                         isChromeEdge = true;
                     }
                     if (isChromeEdge) {
@@ -475,6 +475,8 @@ function runApp(array, type) {
                 }
 
                 SplineArray = [];
+                PointsXcoordinate = [];
+                PointsYcoordinate = [];
                 UserCircles.removeChildren();
                 SplineDrawn.removeChildren();
 
@@ -491,7 +493,9 @@ function runApp(array, type) {
                             UserCircles.addChild(circle);
                         }
                     }
+                }
 
+                if (UserArray.length >= 2) {
                     /* Draw the spline from the user input. */
                     var SplinePath = new scope.Path();
                     SplinePath.strokeColor = interaction_settings.spline_color;
@@ -503,10 +507,7 @@ function runApp(array, type) {
                     }
 
                     mySplineDraw = new MonotonicCubicSpline(PointsXcoordinate, PointsYcoordinate);
-                    SplinePath.add(  new scope.Point(UserArray[0].x, UserArray[0].y));
-                    SplineArray.push(new scope.Point(UserArray[0].x, UserArray[0].y));
-
-                    for (var pointX = UserArray[0].x + interaction_settings.draw_step; pointX < UserArray[UserArray.length-1].x; pointX = pointX + interaction_settings.draw_step) {
+                    for (var pointX = UserArray[0].x; pointX <= UserArray[UserArray.length-1].x; pointX = pointX + interaction_settings.draw_step) {
                         var pointY = mySplineDraw.interpolate(pointX);
                         SplinePath.add(  new scope.Point(pointX,pointY));
                         SplineArray.push(new scope.Point(pointX,pointY));
@@ -515,11 +516,10 @@ function runApp(array, type) {
                     SplinePath.add(  new scope.Point(UserArray[UserArray.length-1].x, mySplineDraw.interpolate(UserArray[UserArray.length-1].x)));
                     SplineArray.push(new scope.Point(UserArray[UserArray.length-1].x, mySplineDraw.interpolate(UserArray[UserArray.length-1].x)));
                     SplineDrawn.addChild(SplinePath);
-
-                    /* Draw the points and lines of the spline. */
-                    scope.project.activeLayer.addChild(UserCircles);
-                    scope.project.activeLayer.addChild(SplineDrawn);
-                } 
+                }
+                /* Draw the points and lines of the spline. */
+                scope.project.activeLayer.addChild(UserCircles);
+                scope.project.activeLayer.addChild(SplineDrawn);
             };
 
             function create_response() {
@@ -578,6 +578,7 @@ function runApp(array, type) {
                     hitPoint = click.point;
                     var hitResult = UserCircles.hitTest(hitPoint, hitOptions);
                     if (!hitResult) {
+                        /* deselects point */
                         if (selected_x !== null || selected_y !== null ) {
                             selected_x = null;
                             selected_y = null;
@@ -601,8 +602,8 @@ function runApp(array, type) {
                         }
                     } 
                     else {
-                        selected_x = click.event.offsetX;  
-                        selected_y = click.event.offsetY;
+                        selected_x = hitResult.item.position.x;  
+                        selected_y = hitResult.item.position.y;
                     }
                     draw_spline();
                     create_response();
@@ -623,7 +624,7 @@ function runApp(array, type) {
                         UserArray.splice(results[i], 1);
                     }
 
-                    UserArray[results[0]] = new scope.Point(mouseStartLocation.x + mouseMovedDistance.x,mouseStartLocation.y + mouseMovedDistance.y);
+                    UserArray[results[0]] = new scope.Point(mouseStartLocation.x + mouseMovedDistance.x, mouseStartLocation.y + mouseMovedDistance.y);
                     draw_spline();
                     create_response();
                 };
