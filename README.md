@@ -7,10 +7,11 @@ SketchApp is created at Delft University of Technology (TU Delft), inhouse for o
 ## Builds
 Latest:
 
-- v3.0		First published version as open source
+- v3.1		Minor bug fixes
 
 Older:
 
+- v3.0		First published version as open source
 - v2.13		Code refactored, cleaned and minor bug fixes
 - v2.11		Function unnesting and code beautify
 - v2.10		Last known version by creator Anatoly Ilin
@@ -36,6 +37,7 @@ RunApp_v3.0.js compatibility is checked for 4 browsers
 
 ## PATCH NOTES
 **Version 3.1**
+
 *Code*
 - Fixed a bug where the spline would not be drawn if two points are drawn
 - Fixed a bug where the spline was incorrectly drawn at the left end
